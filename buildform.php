@@ -1,32 +1,11 @@
 <?php
 
-/* old school
-$myhost="localhost";
-$myuser = "";
-$mypass = "root";
-//$mydb = "m1_f6a179de";
-$connection = mysql_connect($myhost, $myuser, $mypass);
-mysql_select_db($mydb);
-//mysql_set_charset('utf8');
-
-
-$query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name
-    NOT IN ('information_schema', 'mysql', 'performance_schema')";
-
-$result = mysqli_query($link, $query) or die(mysqli_error($link));
-$dbs = array();
-while($db = mysqli_fetch_row($result))
-   $dbs[] = $db[0];
-echo implode('<br/>', $dbs);
-
-*/
-
 $dbh = new PDO('mysql:host=localhost;user=root');
 $statement = $dbh->query('SHOW DATABASES');
 $databaseList = $statement->fetchAll();
 
 
-//Maak nieuwe array uit de geneste data
+//Create workable array from nested data
 foreach($databaseList as $key => $value)
 {
 	foreach($value as $key2 => $value2)
@@ -91,33 +70,56 @@ $databaseList = array_unique($databaseListNew);
 			//Populate again
 			$.each(data, function() {
 
-				//Set initial code based on table conventions
-				var pos = this.indexOf('__');
+				//Check for snake case column names
+				var posSnake = this.indexOf('_');
+				var posIdType = this.indexOf('[');
 				var offset = 0;
-				if(pos > 0)
-				{
-					//MySQL name conventions found, build special casing and define form element types
-					var splitArray = this.split('__');
+				var formType='';
 
+				//Split column name in name and ID & FORM type
+				var splitArray = this.split('[');
+
+				if(posSnake > 0)
+				{
 					//Check for camelcase and adjust accordingly
-					amountCharacters = splitArray[0].split("_q").length - 1; 
-					for(i=0;i < amountCharacters; i++)
+					posUnderscore = splitArray[0].indexOf("_");
+					substrToCamelLowerCase = splitArray[0].substr(posUnderscore, 2);
+					substrToCamelUpperCase = splitArray[0].substr(posUnderscore, 2).toUpperCase();
+
+					if($("#convertSnakeToCamel").is(":checked"))
 					{
-						posCamelCase1 = splitArray[0].indexOf("_q", offset);
-						posCamelCase1 = posCamelCase1 + 2;
-						posCamelCase2 = splitArray[0].indexOf("q_", offset);
-						offset = posCamelCase2 + 2;
-						var subString1 = "_q" + splitArray[0].substr(posCamelCase1, (posCamelCase2-posCamelCase1)) + "q_";
-						var subString2 = subString1.toUpperCase();
-						splitArray[0] = splitArray[0].replace(subString1, subString2).replace("_Q","").replace("Q_","");
-					}	
-					$("#fields").val($("#fields").val() + splitArray[0] + "[" + splitArray[1] + "],");	
+						splitArray[0] = splitArray[0].replace(substrToCamelLowerCase, substrToCamelUpperCase).replace("_","");
+					}
+
+				}
+				if(posIdType > 0)
+				{
+					//Split column name in name and ID & FORM type
+					var idTypeArray = splitArray[1].replace("[","").replace("]","").split(':');
+					var id = idTypeArray[0];
+					var type = idTypeArray[1];
+
+					//Define standard type, formtype links
+					if(type == 0) { formType = "text"; }
+					if(type == 1) { formType = "select"; }
+					if(type == 2) { formType = "checkbox"; }
+
+				}
+				if(posSnake > 0 && posIdType > 0)
+				{
+					$("#fields").val($("#fields").val() + splitArray[0] + "[" + formType + "],");	
+				}
+				else if(posSnake > 0)
+				{
+					$("#fields").val($("#fields").val() + splitArray[0] + "[text],");	
+				}
+				else if(posIdType > 0)
+				{
+					$("#fields").val($("#fields").val() + splitArray[0] + "[" + formType + "],");	
 				}
 				else
-				{a
-					//MySQL conventions not found, so assume all = text and no special casing
-					$("#fields").val($("#fields").val() + this + "[text],");	
-
+				{
+					$("#fields").val($("#fields").val() + splitArray[0] + "[text],");	
 				}
 
 			});		
@@ -127,13 +129,16 @@ $databaseList = array_unique($databaseListNew);
 
 		function buildCode()
 		{
+			//Clear existing output
+			clearCode();
+
 			var fields = $("#fields").val().split(",");
 
 			var length = fields.length-1,
 			field = null;
 
 
-			//evt header for bootstrap erbij
+			//Bootstrap header code
 			var bootstrapHeader = "<body>\n";
 			bootstrapHeader = bootstrapHeader + '    <div class="container">\n';
 			var bootstrapHeader = bootstrapHeader.replace(/./g, function(e){
@@ -147,27 +152,40 @@ $databaseList = array_unique($databaseListNew);
 			  field = fields[i];
 			  //Split mysql field name and type of field for HTML (text, select, checkbox etc. name[type])
 			  fieldArray = field.split("[");
-			  fieldName1 = fieldArray[0]; //Maybe CamelCase?
-			  fieldName2 = fieldArray[0].toLowerCase(); //Make it lowercase
+			  fieldName1 = fieldName2 = fieldArray[0]; //Maybe CamelCase?
 			  fieldType = fieldArray[1].replace("[","").replace("]","");
 
+			  //Check for prefix values and see if complete var names need to be converted again for proper camelCase
+			  if($("#prefix1ToCamel").is(":checked"))
+			  {
+				fieldName1 = fieldName1.charAt(0).toUpperCase() + fieldName1.slice(1);
+			  } 				  
+			  if($("#prefix2ToCamel").is(":checked"))
+			  {
+				fieldName2 = fieldName2.charAt(0).toUpperCase() + fieldName2.slice(1);
+			  }
+			  else if($("#prefix2ToLowerCase").is(":checked"))
+			  {
+ 	     		fieldName2 = fieldArray[0].toLowerCase(); //Make it lowercase
+			  }
+
 			  var code1 = $("#code1").html();
-			  code1 = code1 + "{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' => '" + fieldName1 + "')) }}<br/>";
+			  code1 = code1 + "{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' =>  trans('placeholders." + fieldName1 + "')) }}<br/>";
 			  $("#code1").html(code1);
 
 			  var code2 = $("#code2").html();
-			  code2 = code2 + "{{ Form::label('" + $("#prefix1").val() + fieldName1 + "', trans('messages."+ $("#prefix1").val() + fieldName1 +"')) }}<br/>";
-			  code2 = code2 + "{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' => '" + fieldName1 + "')) }}<br/>";
+			  code2 = code2 + "{{ Form::label('" + $("#prefix1").val() + fieldName1 + "', trans('labels."+ $("#prefix1").val() + fieldName1 +"')) }}<br/>";
+			  code2 = code2 + "{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' => trans('placeholders." + fieldName1 + "')) }}<br/>";
 			  $("#code2").html(code2);
 
 			  var code3 = $("#code3").html();
 
 				bootstrap = bootstrap + '        <div class="row">\n';
 				bootstrap = bootstrap + '            <div class="col-md-4">\n';
-				bootstrap = bootstrap + "                <p>{{ Form::label('" + $("#prefix1").val() + fieldName1 + "', trans('messages."+ $("#prefix1").val() + fieldName1 +"')) }}</p>\n";
+				bootstrap = bootstrap + "                <p>{{ Form::label('" + $("#prefix1").val() + fieldName1 + "', trans('labels."+ $("#prefix1").val() + fieldName1 +"')) }}</p>\n";
 				bootstrap = bootstrap + '            </div>\n';
 				bootstrap = bootstrap + '            <div class="col-md-8">\n';
-				bootstrap = bootstrap + "                <p>{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' => '" + fieldName1 + "')) }}</p>\n";
+				bootstrap = bootstrap + "                <p>{{ Form::" + fieldType + "('" + $("#prefix1").val() + fieldName1 + "', " + $("#prefix2").val() + fieldName2 + ", array('class' => '" + $("#class").val() + "', 'placeholder' => trans('placeholders." + fieldName1 + "')) }}</p>\n";
 				bootstrap = bootstrap + '            </div>\n';
 				bootstrap = bootstrap + '        </div>\n';
 
@@ -185,7 +203,7 @@ $databaseList = array_unique($databaseListNew);
 				$("#code4").html(code4);
 			}
 
-			//Evt bootrap footer
+			//Bootrap footer code
 			bootstrapFooter = '    </div>\n';
 			bootstrapFooter = bootstrapFooter + '</body>\n';
 
@@ -209,14 +227,31 @@ $databaseList = array_unique($databaseListNew);
 			$("#code4").html("<pre>" + code4 + ajaxCall + "</pre>");			
 
 
+		}
 
-
-
+		function clearCode()
+		{
+			//Clear all existing output
+			$("#code1").html("");
+			$("#code2").html("");
+			$("#code3").html("");
+			$("#code4").html("");			
 		}
 
 	</script>
 </head>
 <body>
+<h1>LARAVEL FORM GENERATOR</h1>
+<b>Usage:</b>Load fields directly from table column names, or set the Mysql fields manually.<br/>
+In case you would like to generate forms directly from the mysql database, check the readme. <br/>
+There is some built in flexibillity regarding var naming conventions. Set it to your liking.<br/>
+For efficiency purposes this tool assumes usage of the lang file from laravel localization to set labels and placeholders.<br/>
+You can set a prefix value for both the form name, and the form value elements.<br/>
+Output are a few templates of standard laravel blade code, with bootstrap, and also jquery AJAX which is also a PITA when you deal with lots of form elements</br>
+<br/>
+Note: only form text elements give the right blade output for now, of course you can alter the output for selects, checkbox in the source.<br/><br/>
+Questions / comments: ray[ at ] gmail com
+<hr>
 	<form action="buildform.php">
 		
 		<label for="database">Select database</label><br/>
@@ -227,21 +262,22 @@ $databaseList = array_unique($databaseListNew);
 				echo "<option value='".$value."'>".$value."</option>";
 			}
 			?>
-		</select>&nbsp;Table: 
+		</select><br/> 
+		<label for="convertSnakeToCamel">Convert snake_case to camelCase?</label><br/>
+		<input type="checkbox" id="convertSnakeToCamel"/><br/> 				
+		<label for "table">Select table</label><br/>
 		<select id="table" onChange="setFields();">
 			
 		</select><br/>
 		<label for="fields">Mysql fields (name1[text],name2[select] etc.) tip: CamelCase[text]</label><br/>
 		<input type="text" id="fields" size="50"/><br/>
 		<label for="prefix1">Prefix name</label><br/>
-		<input type="text" id="prefix1" size="20"/><br/>
+		<input type="text" id="prefix1" size="20"/><label for="prefix1CamelCase">Convert to camelCase?</label><input type="checkbox" id="prefix1ToCamel"/><br/>
 		<label for="prefix2">Prefix value</label><br/>
-		<input type="text" id="prefix2" size="20"/><br/>	
+		<input type="text" id="prefix2" size="20"/><label for="prefix2CamelCase">Convert to camelCase?</label><input type="checkbox" id="prefix2ToCamel"/><label for="prefix2LowerCase">all lowercase?</label><input type="checkbox" id="prefix2ToLowerCase"/><br/>	
 		<label for="class">Class</label><br/>
 		<input type="text" id="class" size="20"/><br/>
-		<label for="placeholder"></label><br/>
-		<!-- <input type="checkbox" id="placeholder"/><br/> -->				
-		<input type="button" onClick="buildCode();" value="Generate code">
+		<input type="button" onClick="buildCode();" value="Generate code">&nbsp;<input type="button" onClick="clearCode();" value="Clear code">
 	</form>
 	<br/>
 	<h2>Laravel Blade FORM elements</h2>
