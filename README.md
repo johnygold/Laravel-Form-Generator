@@ -3,7 +3,7 @@ Laravel-Form-Generator
 
 PHP tool to generate Laravel Blade Form/Ajax elements
 
-It looks for MySQL databases and generates forms/ajax queries based on columns names.
+It looks for MySQL databases and generates forms/ajax queries based on columns names.(or you can input these manually)
 There are a few naming conventions build in for the columns to affect the generation of the form elements:
 <br/>
 <ul> _ = Underscore can be used to convert to camelCase</ul>
@@ -12,8 +12,6 @@ There are a few naming conventions build in for the columns to affect the genera
  Ok, to sum this up. You can have a column name like this:
  
  user_name[1:0]
- 
- 
  
  Without further settings this will result into form element {{ form:text('user_name', $user_name) }}
  
