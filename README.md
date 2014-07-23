@@ -4,7 +4,7 @@ Laravel-Form-Generator
 PHP tool to generate Laravel Blade Form/Ajax elements
 
 It looks for MySQL databases and generates forms/ajax queries based on columns names.(or you can input these manually)
-There are a few naming conventions build in for the columns to affect the generation of the form elements:
+There are a few naming conventions built in for the columns to affect the generation of the form elements:
 <br/>
 <ul> _ = Underscore can be used to convert to camelCase</ul>
 <ul> [ID:FORMTYPE] = Columns can have ID's so they can be inserted into templates. Form type, 0=text/1=select/2=checkbox.</ul>
