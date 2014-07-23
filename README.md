@@ -14,7 +14,7 @@ There are a few naming conventions build in for the columns to effect the genera
  
  __a__pples_-text_-ID123 (or __a__pples_-0_-ID123 which does the same but saves space)
  
-For more info on how to use these naming conventions properly see USAGE
+For more info on how to use these naming conventions properly see Usage
  
 
 <h2>Installation</h2>
@@ -22,7 +22,7 @@ Put the files inside a folder on you local machine. Open each and look for MySQL
 Make sure they match yours. Open buildform.php on your local webserver and you are good to go.
 <br/><br/>
 <h2>Usage</h2>
-The idea is that forms will be generated based on your table's column names. This include possible camelCasing for vars, defining the type of the form element but also assigning ID's in case you want to use it for templating. (you can build a html template, put the columns ID's on the positions where the form elements should come, ans parse it later on)
+The idea is that forms will be generated based on your table's column names. (not necessary though, you can also directly input the desired fields) This include possible camelCasing for vars, defining the type of the form element but also assigning ID's in case you want to use it for templating. (you can build a html template, put the columns ID's on the positions where the form elements should come, and parse it later on)
 
 Let's say you want to have a form to edit an user's fist name. It could look something like this:
 
@@ -36,7 +36,7 @@ The tool would output the above using these settings:<br/>
 <ul>class = "form-control"</ul>
 </li>
 
-So the first prefix is used to set the form name, the second, the value, and the class sets the right CSS. Note that placeholder gives an specific text that can't be devised from the columns name. Therefore I recommend using localization in Laravel, so you can define it later on inside the translation file. So placeholder would look like => trans('messages.firstname') Same goes for form labels.
+So the first prefix is used to set the form name, the second, the value, and the class sets the right CSS. Note that placeholder gives a specific text that can't be devised from the columns name. Therefore I recommend using localization in Laravel, so you can define it later on inside the translation file. So placeholder would look like => trans('messages.firstname') Same goes for form labels.
 
 Now, suppose you'd use camelCasing in your coding, you most likely want to have something like this:
 
